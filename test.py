@@ -11,12 +11,13 @@ class PINN(nn.Module):
     def __init__(self):
         super(PINN, self).__init__()
         self.layer = nn.Sequential(
-            nn.Linear(2, 20), nn.Tanh(),
-            nn.Linear(20, 20), nn.Tanh(),
-            nn.Linear(20, 20), nn.Tanh(),
-            nn.Linear(20, 20), nn.Tanh(),
-            nn.Linear(20, 20), nn.Tanh(),
-            nn.Linear(20, 1)
+            nn.Linear(2, 50), nn.Tanh(),
+            nn.Linear(50, 50), nn.Tanh(),
+            nn.Linear(50, 50), nn.Tanh(),
+            nn.Linear(50, 50), nn.Tanh(),
+            nn.Linear(50, 50), nn.Tanh(),
+            nn.Linear(50, 50), nn.Tanh(),
+            nn.Linear(50, 1)
         ).to(device)
 
     def forward(self, t, x):
@@ -60,7 +61,7 @@ def f(x):
     return torch.sin(np.pi * x)
 
 def analytical_solution(t, x, alpha=1.0, n_terms=50):
-    """解析解计算函数（有限项级数解）"""
+    """解析解计算函数"""
     u = torch.zeros_like(x)
     for n in range(1, n_terms + 1):
         lambda_n = (n * np.pi) ** 2
@@ -78,6 +79,8 @@ def train(model, optimizer, num_epochs, lr=1e-3, alpha=1.0):
     """训练物理信息神经网络模型"""
     losses = []
     errors = []
+
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.5)
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
@@ -101,9 +104,10 @@ def train(model, optimizer, num_epochs, lr=1e-3, alpha=1.0):
         x_ic = torch.rand(1000, 1).to(device) * 2 - 1
         ic_loss = initial_loss(model, x_ic)
 
-        loss = f_loss + bc_loss + ic_loss
+        loss = 1.0 * f_loss + 0.5 * bc_loss + 0.5 * ic_loss
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         losses.append(loss.item())
         errors.append(calculate_error(model, t, x))
